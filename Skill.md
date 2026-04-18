@@ -1,30 +1,48 @@
 ---
-name: aigc-detection-attack-pipeline
-description: 对AI图像检测系统进行攻击。在用户想要攻击AI图像检测系统或者探寻AI图像检测系统弱点时进行使用。
+name: aigc-detection-iterative-attack-pipeline
+description: 针对AI图像检测系统的智能、迭代式攻击策略探索工具。由Agent作为决策大脑，动态生成攻击策略，并基于多轮实验结果总结最佳经验。
 ---
 
-# AIGC_Detectuib_Attack_Pipeline
+# AIGC_Detection_Iterative_Attack_Pipeline
 
-## Description
-针对AI生成图像检测方法的自动化攻击管道。主要通过对图像施加不同类型的后处理，使得AI生成图像检测方法无法正确判断图像是否是由AI生成的。
+## 核心理念
+你是负责攻破 AI 图像检测系统的“红队分析师”。不要盲目发号施令，你必须基于代码工具返回的 `aigc_probability`（预测概率）和历史数据，像人类科学家一样思考：如果概率下降不明显，说明强度不够或该方法不适用；如果概率下降明显，可以微调强度以寻找“刚刚好能绕过检测且对画质破坏最小”的临界点。
 
-## 相关脚本说明
-该skill包含以下脚本：
+## 可用代码工具
 
-`scripts/get_image_path.py`: 
-- 无输入参数
-- 输出参数1：`image_path`，类型为`list(string)`，代表本次要处理的图像所在地址列表
+`scripts/get_images.py`: 
+- **功能**：获取需要进行攻击测试的原始图像列表。无输入参数。返回包含 `image_name` 和 `image_path` 的列表。
 
-`scripts/process_image_path.py`: 
-- 输入参数1：`image_path`，类型为`list(string)`，代表本次要处理的图像所在地址列表；
-- 输入参数2：`attack_type`，类型为`string`，代表本次处理方法，取值范围为["JPEG", "BLUR"]；
-- 输出参数1：`processed_image_path`，类型为`list(string)`，代表处理后的图像所在地址；
+`scripts/execute_attack_and_detect.py`: 
+- **功能**：执行你所指定的攻击方式，运行底层检测模型，并返回本轮结果和该图像的所有历史记录。
+- **输入参数**：
+  - `--image_name` (string)
+  - `--image_path` (string)
+  - `--attack_type` (string): 可选 ["JPEG", "BLUR"]
+  - `--intensity` (int): 1 到 100 的整数。数值越大，对画质破坏越大，攻击效果理论上越强。
 
-`scripts/det_image_path.py`:
-- 输出参数1：`processed_image_path`，类型为`list(string)`，代表用于检测的图像所在地址；
-- 输出参数1：`aigc_det_results`，类型为`list(dict)`，代表AI输出图像检测方法所给出的检测结果；
+`scripts/get_global_stats.py`:
+- **功能**：在所有图像处理完毕后调用。它会自动汇总底层的日志数据，计算成功率、平均所需轮次、各方法的平均生效强度等统计指标，为你撰写最终报告提供数据支撑。无输入参数。
 
-## 工作流示例
-1. 调用`scripts/get_image_path.py`获得要处理的图像地址`image_path`
-2. 调用`scripts/process_image_path.py image_path attack_type`获得处理过后的图像地址`processed_image_path`
-3. 调用`scripts/det_image_path.py processed_image_path`，获得针对给定图像的检测结果`aigc_det_results`
+## 你的智能工作流 (Agentic Workflow)
+
+请严格按照以下步骤执行探索与总结：
+
+**第一阶段：感知环境**
+1. 调用 `get_images.py` 获取所有待处理的图像。
+
+**第二阶段：智能博弈 (逐张图像处理)**
+2. 针对列表中的每一张图像，启动你的内部推理循环：
+   - **Step A**: 根据常识选择一个初始策略（例如：中等强度的 JPEG 压缩）。调用 `execute_attack_and_detect.py`。
+   - **Step B**: 仔细分析工具返回的 `data.current_result` 和 `data.full_history`。
+     - 如果 `is_aigc_prediction` 为 `false`（概率 < 0.5），说明你**成功绕过**了检测，立即停止对该图像的攻击，记录你的心得，转入下一张图像。
+     - 如果概率依然很高（例如 > 0.8），说明你的策略完全失效。请在下一轮大幅提升 `intensity`，或者更换 `attack_type`。
+     - 如果概率已经下降（例如降至 0.6），说明方向正确，请在下一轮适度增加 `intensity`。
+   - **Step C**: 基于上述推理，再次调用 `execute_attack_and_detect.py`。每张图片最多尝试 **5次**。如果 5 次后仍未成功，放弃该图像。
+
+**第三阶段：专家级总结**
+3. 当所有图像的博弈循环都结束后，调用 `get_global_stats.py` 获取宏观统计数据。
+4. **你的最终任务**：结合你刚才在“第二阶段”积累的直觉体验，以及“第三阶段”获得的硬核统计数据，向用户输出一份格式精美的 Markdown 报告——《AIGC 检测器弱点及规避策略研究报告》。报告需包含：
+   - 核心发现（哪种方法最致命？）
+   - 临界点分析（多少的强度是性价比最高的规避点？）
+   - 攻击建议（如果用户想要最高效地规避，应该怎么做？）
