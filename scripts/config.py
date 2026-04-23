@@ -3,7 +3,7 @@ import json
 
 # 绝对路径配置
 # BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BASE_DIR = "/root/my_workspace/aigc_det_attack"
+BASE_DIR = "/root/aigc_det_attack"
 RAW_IMAGE_DIR = os.path.join(BASE_DIR, "data", "raw_images")
 PROCESSED_IMAGE_DIR = os.path.join(BASE_DIR, "data", "processed_images")
 EXPERIENCE_DIR = os.path.join(BASE_DIR, "data", "experience")
