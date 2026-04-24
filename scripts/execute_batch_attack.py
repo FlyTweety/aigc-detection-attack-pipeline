@@ -14,8 +14,8 @@ if __name__ == "__main__":
     }
     
     try:
-        # 批量处理几千张图耗时极长，必须设置较长的超时时间
-        response = requests.post("http://127.0.0.1:8000/batch_attack", json=payload, timeout=3600)
+        # 注意：真实GPU推理可能需要几十分钟甚至数小时。Timeout设置为 7200 秒 (2小时)
+        response = requests.post("http://127.0.0.1:8000/batch_attack", json=payload, timeout=7200)
         print(json.dumps(response.json(), ensure_ascii=False))
     except Exception as e:
         print(json.dumps({"status": "error", "message": str(e)}))
